@@ -95,14 +95,14 @@ export interface SchemaGeneratorOptions extends BuildContextOptions {
   directives?: GraphQLDirective[];
 }
 
-export abstract class SchemaGenerator {
-  private static objectTypesInfo: ObjectTypeInfo[] = [];
-  private static inputTypesInfo: InputObjectTypeInfo[] = [];
-  private static interfaceTypesInfo: InterfaceTypeInfo[] = [];
-  private static enumTypesInfo: EnumTypeInfo[] = [];
-  private static unionTypesInfo: UnionTypeInfo[] = [];
+export class SchemaGenerator {
+  private objectTypesInfo: ObjectTypeInfo[] = [];
+  private inputTypesInfo: InputObjectTypeInfo[] = [];
+  private interfaceTypesInfo: InterfaceTypeInfo[] = [];
+  private enumTypesInfo: EnumTypeInfo[] = [];
+  private unionTypesInfo: UnionTypeInfo[] = [];
 
-  static async generateFromMetadata(options: SchemaGeneratorOptions): Promise<GraphQLSchema> {
+  async generateFromMetadata(options: SchemaGeneratorOptions): Promise<GraphQLSchema> {
     const schema = this.generateFromMetadataSync(options);
     if (!options.skipCheck) {
       const { errors } = await graphql(schema, getIntrospectionQuery());
@@ -113,7 +113,7 @@ export abstract class SchemaGenerator {
     return schema;
   }
 
-  static generateFromMetadataSync(options: SchemaGeneratorOptions): GraphQLSchema {
+  generateFromMetadataSync(options: SchemaGeneratorOptions): GraphQLSchema {
     this.checkForErrors(options);
     BuildContext.create(options);
     getMetadataStorage().build();
@@ -132,7 +132,7 @@ export abstract class SchemaGenerator {
     return schema;
   }
 
-  private static checkForErrors(options: SchemaGeneratorOptions) {
+  private checkForErrors(options: SchemaGeneratorOptions) {
     ensureInstalledCorrectGraphQLPackage();
     if (getMetadataStorage().authorizedFields.length !== 0 && options.authChecker === undefined) {
       throw new Error(
@@ -141,7 +141,7 @@ export abstract class SchemaGenerator {
     }
   }
 
-  private static getDefaultValue(
+  private getDefaultValue(
     typeInstance: { [property: string]: unknown },
     typeOptions: TypeOptions,
     fieldName: string,
@@ -165,7 +165,7 @@ export abstract class SchemaGenerator {
       : defaultValueFromInitializer;
   }
 
-  private static buildTypesInfo() {
+  private buildTypesInfo() {
     this.unionTypesInfo = getMetadataStorage().unions.map<UnionTypeInfo>(unionMetadata => ({
       unionSymbol: unionMetadata.symbol,
       type: new GraphQLUnionType({
@@ -420,7 +420,7 @@ export abstract class SchemaGenerator {
     });
   }
 
-  private static buildRootQueryType(resolvers?: Function[]): GraphQLObjectType {
+  private buildRootQueryType(resolvers?: Function[]): GraphQLObjectType {
     const queriesHandlers = this.filterHandlersByResolvers(getMetadataStorage().queries, resolvers);
 
     return new GraphQLObjectType({
@@ -429,7 +429,7 @@ export abstract class SchemaGenerator {
     });
   }
 
-  private static buildRootMutationType(resolvers?: Function[]): GraphQLObjectType | undefined {
+  private buildRootMutationType(resolvers?: Function[]): GraphQLObjectType | undefined {
     const mutationsHandlers = this.filterHandlersByResolvers(
       getMetadataStorage().mutations,
       resolvers,
@@ -444,7 +444,7 @@ export abstract class SchemaGenerator {
     });
   }
 
-  private static buildRootSubscriptionType(resolvers?: Function[]): GraphQLObjectType | undefined {
+  private buildRootSubscriptionType(resolvers?: Function[]): GraphQLObjectType | undefined {
     const subscriptionsHandlers = this.filterHandlersByResolvers(
       getMetadataStorage().subscriptions,
       resolvers,
@@ -459,7 +459,7 @@ export abstract class SchemaGenerator {
     });
   }
 
-  private static buildOtherTypes(orphanedTypes?: Function[]): GraphQLNamedType[] {
+  private buildOtherTypes(orphanedTypes?: Function[]): GraphQLNamedType[] {
     return [
       ...this.filterTypesInfoByIsAbstractAndOrphanedTypesAndExtractType(
         this.objectTypesInfo,
@@ -476,7 +476,7 @@ export abstract class SchemaGenerator {
     ];
   }
 
-  private static generateHandlerFields<T = any, U = any>(
+  private generateHandlerFields<T = any, U = any>(
     handlers: ResolverMetadata[],
   ): GraphQLFieldConfigMap<T, U> {
     return handlers.reduce<GraphQLFieldConfigMap<T, U>>((fields, handler) => {
@@ -504,7 +504,7 @@ export abstract class SchemaGenerator {
     }, {});
   }
 
-  private static generateSubscriptionsFields<T = any, U = any>(
+  private generateSubscriptionsFields<T = any, U = any>(
     subscriptionsHandlers: SubscriptionResolverMetadata[],
   ): GraphQLFieldConfigMap<T, U> {
     const { pubSub } = BuildContext;
@@ -546,7 +546,7 @@ export abstract class SchemaGenerator {
     }, basicFields);
   }
 
-  private static generateHandlerArgs(params: ParamMetadata[]): GraphQLFieldConfigArgumentMap {
+  private generateHandlerArgs(params: ParamMetadata[]): GraphQLFieldConfigArgumentMap {
     return params!.reduce<GraphQLFieldConfigArgumentMap>((args, param) => {
       if (param.kind === "arg") {
         args[param.name] = {
@@ -574,10 +574,7 @@ export abstract class SchemaGenerator {
     }, {});
   }
 
-  private static mapArgFields(
-    argumentType: ClassMetadata,
-    args: GraphQLFieldConfigArgumentMap = {},
-  ) {
+  private mapArgFields(argumentType: ClassMetadata, args: GraphQLFieldConfigArgumentMap = {}) {
     const argumentInstance = new (argumentType.target as any)();
     argumentType.fields!.forEach(field => {
       field.typeOptions.defaultValue = this.getDefaultValue(
@@ -594,7 +591,7 @@ export abstract class SchemaGenerator {
     });
   }
 
-  private static getGraphQLOutputType(
+  private getGraphQLOutputType(
     typeOwnerName: string,
     type: TypeValue,
     typeOptions: TypeOptions = {},
@@ -633,7 +630,7 @@ export abstract class SchemaGenerator {
     return wrapWithTypeOptions(typeOwnerName, gqlType, typeOptions, nullableByDefault);
   }
 
-  private static getGraphQLInputType(
+  private getGraphQLInputType(
     typeOwnerName: string,
     type: TypeValue,
     typeOptions: TypeOptions = {},
@@ -660,7 +657,7 @@ export abstract class SchemaGenerator {
     return wrapWithTypeOptions(typeOwnerName, gqlType, typeOptions, nullableByDefault);
   }
 
-  private static getResolveTypeFunction<TSource = any, TContext = any>(
+  private getResolveTypeFunction<TSource = any, TContext = any>(
     resolveType: TypeResolver<TSource, TContext>,
   ): GraphQLTypeResolver<TSource, TContext> {
     return async (...args) => {
@@ -672,14 +669,14 @@ export abstract class SchemaGenerator {
     };
   }
 
-  private static filterHandlersByResolvers<T extends ResolverMetadata>(
+  private filterHandlersByResolvers<T extends ResolverMetadata>(
     handlers: T[],
     resolvers: Function[] | undefined,
   ) {
     return resolvers ? handlers.filter(query => resolvers.includes(query.target)) : handlers;
   }
 
-  private static filterTypesInfoByIsAbstractAndOrphanedTypesAndExtractType(
+  private filterTypesInfoByIsAbstractAndOrphanedTypesAndExtractType(
     typesInfo: Array<ObjectTypeInfo | InterfaceTypeInfo | InputObjectTypeInfo>,
     orphanedTypes: Function[] | undefined,
   ) {
